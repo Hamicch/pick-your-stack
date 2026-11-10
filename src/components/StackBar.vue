@@ -37,7 +37,45 @@ async function downloadDiagram() {
 </script>
 
 <template>
-  <div v-if="count > 0" class="bar-wrapper">
+  <!-- Desktop: always-visible sidebar panel -->
+  <div class="sidebar-panel">
+    <div class="panel-header">
+      <span class="panel-title">Your Stack</span>
+      <button v-if="count > 0" class="clear-btn" @click="clearAll">Clear</button>
+    </div>
+
+    <div v-if="count === 0" class="empty-state">
+      <span class="empty-icon">☐</span>
+      <p>Select tools from each category to build your stack.</p>
+    </div>
+
+    <template v-else>
+      <ul class="selection-list">
+        <li v-for="s in selectedList" :key="s.category.id" class="selection-item">
+          <img :src="s.tool.logo" :alt="s.tool.name" class="sel-logo" @error="(e) => onLogoError(e, s.tool.name)" />
+          <div class="sel-text">
+            <span class="sel-category">{{ s.category.label }}</span>
+            <span class="sel-name">{{ s.tool.name }}</span>
+          </div>
+        </li>
+      </ul>
+      <div class="panel-actions">
+        <button class="action-btn primary" @click="copyPrompt">
+          {{ copied ? 'Copied!' : 'Copy AI Prompt' }}
+        </button>
+        <button class="action-btn" :disabled="exporting === 'stack'" @click="downloadStack">
+          {{ exporting === 'stack' ? 'Exporting…' : 'Stack PNG' }}
+        </button>
+        <button class="action-btn" :disabled="exporting === 'diagram'" @click="downloadDiagram">
+          {{ exporting === 'diagram' ? 'Exporting…' : 'Diagram PNG' }}
+        </button>
+      </div>
+    </template>
+  </div>
+
+  <!-- Mobile: bottom bar + drawer (teleported outside the sidebar which is display:none on mobile) -->
+  <Teleport to="body">
+  <div v-if="count > 0" class="mobile-bar">
     <div v-if="expanded" class="bar-expanded" @click.self="expanded = false">
       <div class="bar-panel">
         <div class="panel-header">
@@ -91,10 +129,184 @@ async function downloadDiagram() {
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>
-.bar-wrapper {
+/* ── Sidebar panel (desktop) ────────────────────────── */
+.sidebar-panel {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+}
+
+.sidebar-panel .panel-header {
+  padding: 16px;
+  border-bottom: 2px solid var(--paper-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.sidebar-panel .panel-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.sidebar-panel .selection-list {
+  list-style: none;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-panel .panel-actions {
+  padding: 12px;
+  border-top: 2px solid var(--paper-sunken);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.empty-state {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.empty-icon {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+
+.empty-state p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Shared item styles ─────────────────────────────── */
+.selection-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--paper-raised);
+  border: 2px solid var(--paper-sunken);
+}
+
+.sel-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sel-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sel-category {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--blue);
+}
+
+.sel-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clear-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.clear-btn:hover {
+  color: var(--red);
+}
+
+.action-btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 10px 18px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out),
+              box-shadow 140ms var(--ease-out),
+              background 140ms var(--ease-out),
+              color 140ms var(--ease-out);
+}
+
+.action-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-lift);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.action-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow);
+}
+
+.action-btn.primary {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+  box-shadow: 4px 4px 0 var(--red-deep);
+}
+.action-btn.primary:hover {
+  background: var(--red-deep);
+  border-color: var(--red-deep);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--red-deep);
+}
+
+/* ── Mobile bar ─────────────────────────────────────── */
+.mobile-bar {
+  display: none;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -193,35 +405,20 @@ async function downloadDiagram() {
   overflow-y: auto;
 }
 
-.panel-header {
+.bar-panel .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
 }
 
-.panel-title {
+.bar-panel .panel-title {
   font-size: 16px;
   font-weight: 800;
   color: var(--ink);
 }
 
-.clear-btn {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-muted);
-  background: none;
-  border: none;
-  padding: 4px 8px;
-}
-.clear-btn:hover {
-  color: var(--red);
-}
-
-.selection-list {
+.bar-panel .selection-list {
   list-style: none;
   padding: 0;
   display: grid;
@@ -230,48 +427,7 @@ async function downloadDiagram() {
   margin-bottom: 20px;
 }
 
-.selection-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--paper-raised);
-  border: 2px solid var(--paper-sunken);
-}
-
-.sel-logo {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.sel-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.sel-category {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--blue);
-}
-
-.sel-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.panel-actions {
+.bar-panel .panel-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -279,70 +435,29 @@ async function downloadDiagram() {
   border-top: 2px solid var(--paper-sunken);
 }
 
-.action-btn {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 10px 18px;
-  border: 2px solid var(--ink);
-  background: var(--paper);
-  color: var(--ink);
-  box-shadow: var(--shadow);
-  transition: transform 140ms var(--ease-out),
-              box-shadow 140ms var(--ease-out),
-              background 140ms var(--ease-out),
-              color 140ms var(--ease-out);
-}
-
-.action-btn:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: var(--shadow-lift);
-  background: var(--ink);
-  color: var(--paper);
-}
-
-.action-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: none;
-}
-
-.action-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: var(--shadow);
-}
-
-.action-btn.primary {
-  background: var(--red);
-  color: #fff;
-  border-color: var(--red);
-  box-shadow: 4px 4px 0 var(--red-deep);
-}
-.action-btn.primary:hover {
-  background: var(--red-deep);
-  border-color: var(--red-deep);
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 var(--red-deep);
-}
-
 .action-btn.small {
   padding: 7px 14px;
   font-size: 11px;
+}
+
+/* ── Breakpoints ────────────────────────────────────── */
+@media (max-width: 900px) {
+  .sidebar-panel {
+    display: none;
+  }
+  .mobile-bar {
+    display: block;
+  }
 }
 
 @media (max-width: 640px) {
   .bar-logos {
     display: none;
   }
-
   .bar-strip {
     padding: 12px 16px;
   }
-
-  .selection-list {
+  .bar-panel .selection-list {
     grid-template-columns: 1fr;
   }
 }
