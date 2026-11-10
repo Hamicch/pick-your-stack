@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/pick-your-stack", "destination": "/" },
     { "source": "/pick-your-stack/:path*", "destination": "/:path*" }
   ]
 }
