@@ -1,4 +1,5 @@
 import { reactive, computed } from 'vue'
+import { track } from '@vercel/analytics'
 import { categories, type Tool, type Category } from '@/data/categories'
 
 interface Selection {
@@ -14,8 +15,10 @@ export function useStack() {
     if (!category) return
     if (selections.get(categoryId)?.tool.id === tool.id) {
       selections.delete(categoryId)
+      track('tool_deselected', { category: category.label, tool: tool.name })
     } else {
       selections.set(categoryId, { category, tool })
+      track('tool_selected', { category: category.label, tool: tool.name })
     }
   }
 
@@ -34,6 +37,7 @@ export function useStack() {
   const count = computed(() => selections.size)
 
   function clearAll() {
+    track('stack_cleared', { count: selections.size })
     selections.clear()
   }
 

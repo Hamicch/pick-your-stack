@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { track } from '@vercel/analytics'
 import { useStack } from '@/composables/useStack'
 import { exportStackPng, exportDiagramPng } from '@/utils/export'
 import { onLogoError } from '@/utils/logo-fallback'
@@ -14,6 +15,7 @@ async function copyPrompt() {
   if (!text) return
   await navigator.clipboard.writeText(text)
   copied.value = true
+  track('export', { type: 'ai_prompt', tool_count: count.value })
   setTimeout(() => (copied.value = false), 2000)
 }
 
@@ -21,6 +23,7 @@ async function downloadStack() {
   exporting.value = 'stack'
   try {
     await exportStackPng(selectedList.value)
+    track('export', { type: 'stack_png', tool_count: count.value })
   } finally {
     exporting.value = null
   }
@@ -30,6 +33,7 @@ async function downloadDiagram() {
   exporting.value = 'diagram'
   try {
     await exportDiagramPng(selectedList.value)
+    track('export', { type: 'diagram_png', tool_count: count.value })
   } finally {
     exporting.value = null
   }
