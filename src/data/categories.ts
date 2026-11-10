@@ -287,7 +287,7 @@ export const categories: Category[] = [
     diagramLayer: 'External Services',
     tools: [
       { id: 'sanity', name: 'Sanity', ...svgl('sanity-light.svg', 'sanity-dark.svg') },
-      { id: 'contentful', name: 'Contentful', ...svgl('contentful.svg') },
+      { id: 'contentful', name: 'Contentful', ...si('contentful') },
       { id: 'payload', name: 'Payload', ...svgl('payload.svg', 'payload_dark.svg') },
       { id: 'strapi', name: 'Strapi', ...svgl('strapi.svg') },
       { id: 'notion', name: 'Notion', ...svgl('notion.svg') },

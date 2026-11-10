@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useStack } from '@/composables/useStack'
 import { exportStackPng, exportDiagramPng } from '@/utils/export'
+import { onLogoError } from '@/utils/logo-fallback'
 
 const { selectedList, count, clearAll, generatePrompt } = useStack()
 const copied = ref(false)
@@ -45,7 +46,7 @@ async function downloadDiagram() {
         </div>
         <ul class="selection-list">
           <li v-for="s in selectedList" :key="s.category.id" class="selection-item">
-            <img :src="s.tool.logo" :alt="s.tool.name" class="sel-logo" />
+            <img :src="s.tool.logo" :alt="s.tool.name" class="sel-logo" @error="(e) => onLogoError(e, s.tool.name)" />
             <div class="sel-text">
               <span class="sel-category">{{ s.category.label }}</span>
               <span class="sel-name">{{ s.tool.name }}</span>
@@ -77,6 +78,7 @@ async function downloadDiagram() {
             :src="s.tool.logo"
             :alt="s.tool.name"
             class="bar-logo"
+            @error="(e) => onLogoError(e, s.tool.name)"
           />
           <span v-if="count > 6" class="bar-more">+{{ count - 6 }}</span>
         </div>

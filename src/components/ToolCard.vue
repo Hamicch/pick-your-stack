@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Tool } from '@/data/categories'
+import { onLogoError } from '@/utils/logo-fallback'
 
 defineProps<{
   tool: Tool
@@ -22,6 +23,7 @@ defineEmits<{
       :alt="tool.name"
       class="tool-logo"
       loading="lazy"
+      @error="(e) => onLogoError(e, tool.name)"
     />
     <span class="tool-name">{{ tool.name }}</span>
   </button>

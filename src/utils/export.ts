@@ -1,6 +1,7 @@
 import { toPng } from 'html-to-image'
 import type { Tool, Category } from '@/data/categories'
 import { diagramLayerOrder } from '@/data/categories'
+import { initialsUri } from '@/utils/logo-fallback'
 
 interface Selection {
   category: Category
@@ -24,14 +25,101 @@ function createHiddenContainer(): HTMLDivElement {
   return el
 }
 
-function initialsUri(name: string): string {
-  const words = name.replace(/[^a-zA-Z0-9 ]/g, '').trim().split(/\s+/)
-  const text =
-    words.length >= 2
-      ? (words[0][0] + words[1][0]).toUpperCase()
-      : name.slice(0, 2).toUpperCase()
-  const encoded = encodeURIComponent(text)
-  return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%23636150'/><text x='20' y='26' text-anchor='middle' fill='white' font-family='system-ui,sans-serif' font-weight='700' font-size='16'>${encoded}</text></svg>`
+// cdn.simpleicons.org has CORS; svgl.app does not.
+// Map tool IDs to simpleicons slugs for CORS-friendly export fetching.
+const SI_SLUGS: Record<string, string> = {
+  nextjs: 'nextdotjs',
+  react: 'react',
+  vue: 'vuedotjs',
+  nuxt: 'nuxt',
+  svelte: 'svelte',
+  astro: 'astro',
+  solidjs: 'solid',
+  angular: 'angular',
+  remix: 'remix',
+  blazor: 'blazor',
+  tailwind: 'tailwindcss',
+  shadcn: 'shadcnui',
+  radix: 'radixui',
+  chakra: 'chakraui',
+  mantine: 'mantine',
+  mui: 'mui',
+  bootstrap: 'bootstrap',
+  nodejs: 'nodedotjs',
+  bun: 'bun',
+  deno: 'deno',
+  python: 'python',
+  go: 'go',
+  ruby: 'rubyonrails',
+  elixir: 'elixir',
+  nestjs: 'nestjs',
+  hono: 'hono',
+  aspnet: 'dotnet',
+  spring: 'spring',
+  vercel: 'vercel',
+  'cloudflare-workers': 'cloudflare',
+  flyio: 'flydotio',
+  railway: 'railway',
+  render: 'render',
+  netlify: 'netlify',
+  digitalocean: 'digitalocean',
+  postgres: 'postgresql',
+  neon: 'neon',
+  supabase: 'supabase',
+  planetscale: 'planetscale',
+  mysql: 'mysql',
+  mongodb: 'mongodb',
+  firebase: 'firebase',
+  convex: 'convex',
+  turso: 'turso',
+  redis: 'redis',
+  prisma: 'prisma',
+  drizzle: 'drizzle',
+  typeorm: 'typeorm',
+  sequelize: 'sequelize',
+  clerk: 'clerk',
+  auth0: 'auth0',
+  'supabase-auth': 'supabase',
+  nextauth: 'auth0',
+  workos: 'workos',
+  'firebase-auth': 'firebase',
+  sentry: 'sentry',
+  datadog: 'datadog',
+  newrelic: 'newrelic',
+  grafana: 'grafana',
+  prometheus: 'prometheus',
+  axiom: 'axiom',
+  betterstack: 'betterstack',
+  posthog: 'posthog',
+  mixpanel: 'mixpanel',
+  fathom: 'fathom',
+  simpleanalytics: 'simpleanalytics',
+  plausible: 'plausible',
+  resend: 'resend',
+  sendgrid: 'twilio',
+  mailgun: 'mailgun',
+  loops: 'loops',
+  stripe: 'stripe',
+  lemonsqueezy: 'lemonsqueezy',
+  paddle: 'paddle',
+  paypal: 'paypal',
+  anthropic: 'anthropic',
+  gemini: 'googlegemini',
+  algolia: 'algolia',
+  meilisearch: 'meilisearch',
+  elastic: 'elastic',
+  sanity: 'sanity',
+  contentful: 'contentful',
+  strapi: 'strapi',
+  notion: 'notion',
+  'github-actions': 'githubactions',
+  'vercel-deploys': 'vercel',
+  circleci: 'circleci',
+  'gitlab-ci': 'gitlab',
+  buildkite: 'buildkite',
+  vitest: 'vitest',
+  jest: 'jest',
+  cypress: 'cypress',
 }
 
 async function toDataUri(url: string): Promise<string> {
@@ -52,19 +140,33 @@ async function toDataUri(url: string): Promise<string> {
 }
 
 async function resolveLogos(
-  selections: Selection[]
+  selections: Selection[],
 ): Promise<Map<string, string>> {
-  const entries: { url: string; name: string }[] = []
-  for (const s of selections) {
-    entries.push({ url: s.tool.logo, name: s.tool.name })
-  }
   const map = new Map<string, string>()
   await Promise.all(
-    entries.map(async ({ url, name }) => {
+    selections.map(async (s) => {
+      const url = s.tool.logo
       if (map.has(url)) return
-      const dataUri = await toDataUri(url)
-      map.set(url, dataUri || initialsUri(name))
-    })
+
+      // Try the original URL first (works for data URIs and CORS-enabled CDNs)
+      let dataUri = await toDataUri(url)
+      if (dataUri) {
+        map.set(url, dataUri)
+        return
+      }
+
+      // Fall back to cdn.simpleicons.org (has CORS)
+      const siSlug = SI_SLUGS[s.tool.id]
+      if (siSlug) {
+        dataUri = await toDataUri(`https://cdn.simpleicons.org/${siSlug}`)
+        if (dataUri) {
+          map.set(url, dataUri)
+          return
+        }
+      }
+
+      map.set(url, initialsUri(s.tool.name))
+    }),
   )
   return map
 }
